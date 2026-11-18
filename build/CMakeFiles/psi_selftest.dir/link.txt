@@ -1,0 +1,1 @@
+/usr/bin/c++ -O3 -march=native -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/psi_selftest.dir/tools/selftest.cpp.o -o psi_selftest   -L/opt/homebrew/Cellar/libsodium/1.0.22/lib  -Wl,-rpath,/opt/homebrew/Cellar/libsodium/1.0.22/lib libpsi_core.a -lsodium

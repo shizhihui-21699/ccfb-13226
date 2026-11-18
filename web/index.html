@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>涉诈账户隐私求交平台</title>
+<script src="/vue.global.prod.js"></script>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --border: #2d333b; --fg: #e6edf3;
+    --dim: #8b949e; --accent: #2f81f7; --green: #3fb950; --red: #f85149;
+    --amber: #d29922;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--fg); font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; min-height: 100vh; }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 32px 20px 64px; }
+  header { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
+  .logo { width: 42px; height: 42px; border-radius: 10px; background: linear-gradient(135deg, #1f6feb, #8957e5); display: flex; align-items: center; justify-content: center; font-size: 22px; }
+  h1 { font-size: 22px; font-weight: 600; }
+  .sub { color: var(--dim); font-size: 13px; margin-bottom: 28px; }
+  .bank-tag { margin-left: auto; background: #1f6feb22; color: var(--accent); border: 1px solid #1f6feb55; padding: 4px 12px; border-radius: 20px; font-size: 13px; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 22px; margin-bottom: 18px; }
+  .card h2 { font-size: 15px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+  .step-num { width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 12px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-num.done { background: var(--green); }
+  .drop { border: 2px dashed var(--border); border-radius: 10px; padding: 30px; text-align: center; color: var(--dim); cursor: pointer; transition: .2s; }
+  .drop:hover { border-color: var(--accent); color: var(--fg); }
+  .drop input { display: none; }
+  .file-info { margin-top: 12px; font-size: 13px; color: var(--dim); }
+  .btn { background: var(--accent); color: #fff; border: none; padding: 10px 22px; border-radius: 8px; font-size: 14px; cursor: pointer; transition: .15s; }
+  .btn:hover:not(:disabled) { filter: brightness(1.15); }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+  .btn.ghost { background: transparent; border: 1px solid var(--border); color: var(--fg); }
+  .btn.green { background: var(--green); }
+  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  input[type=text] { background: var(--bg); border: 1px solid var(--border); color: var(--fg); padding: 9px 12px; border-radius: 8px; font-size: 14px; width: 260px; }
+  .progress { height: 8px; background: var(--bg); border-radius: 4px; overflow: hidden; margin-top: 12px; }
+  .progress > div { height: 100%; background: var(--accent); transition: width .3s; }
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 14px; }
+  .stat { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+  .stat .k { font-size: 12px; color: var(--dim); }
+  .stat .v { font-size: 20px; font-weight: 600; margin-top: 2px; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+  .b-empty { background: #8b949e22; color: var(--dim); }
+  .b-run { background: #d2992222; color: var(--amber); }
+  .b-done { background: #3fb95022; color: var(--green); }
+  .b-err { background: #f8514922; color: var(--red); }
+  .log { background: #010409; border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; line-height: 1.7; max-height: 220px; overflow-y: auto; color: #7ee787; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 12px; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border); font-family: ui-monospace, Menlo, monospace; }
+  th { color: var(--dim); font-weight: 500; }
+  .hint { font-size: 12px; color: var(--dim); margin-top: 10px; line-height: 1.6; }
+  .shield { color: var(--green); }
+</style>
+</head>
+<body>
+<div id="app" class="wrap">
+  <header>
+    <div class="logo">🛡️</div>
+    <div>
+      <h1>涉诈账户名单隐私求交平台</h1>
+      <div class="sub">ECDH-PSI 协议 · Ristretto255 · 名单不出本行, 仅交换盲化椭圆曲线点</div>
+    </div>
+    <div class="bank-tag">{{ status.bank || '…' }}</div>
+  </header>
+
+  <!-- 步骤 1: 导入名单 -->
+  <div class="card">
+    <h2><span class="step-num" :class="{done: status.items > 0}">1</span> 导入本行涉诈账户名单
+      <span class="badge" :class="stageBadge.cls">{{ stageBadge.text }}</span>
+    </h2>
+    <label class="drop">
+      <input type="file" @change="upload" accept=".csv,.txt">
+      <div v-if="!uploading">📂 点击选择名单文件(每行一条: 账号,涉诈类型,日期)</div>
+      <div v-else>上传中…</div>
+    </label>
+    <div class="file-info" v-if="status.items > 0">
+      已导入 <b>{{ status.items.toLocaleString() }}</b> 条(按账号去重)
+      <template v-if="status.stage === 'PREPARING'"> · 正在本地盲化预处理 {{ pct(status.prep_done, status.prep_total) }}%</template>
+      <template v-if="status.prep_ms"> · 预处理耗时 {{ (status.prep_ms/1000).toFixed(1) }}s</template>
+    </div>
+    <div class="progress" v-if="status.stage === 'PREPARING'">
+      <div :style="{width: pct(status.prep_done, status.prep_total) + '%'}"></div>
+    </div>
+    <div class="hint"><span class="shield">✓</span> 名单明文仅保存在本行服务器内存中, 不会以任何形式发送给对方或第三方。</div>
+  </div>
+
+  <!-- 步骤 2: 发起求交 -->
+  <div class="card">
+    <h2><span class="step-num" :class="{done: status.stage === 'DONE'}">2</span> 与协作银行求交</h2>
+    <div class="row">
+      <input type="text" v-model="peer" placeholder="对方节点地址, 如 http://10.0.0.2:9002">
+      <button class="btn" :disabled="status.stage !== 'READY'" @click="start">发起求交</button>
+      <button class="btn ghost" @click="reset">重置</button>
+    </div>
+    <div class="progress" v-if="status.stage === 'RUNNING' && status.round_total > 0">
+      <div :style="{width: pct(status.round_done, status.round_total) + '%'}"></div>
+    </div>
+    <div class="stat-grid">
+      <div class="stat"><div class="k">本行名单</div><div class="v">{{ status.items ? status.items.toLocaleString() : '—' }}</div></div>
+      <div class="stat"><div class="k">协议状态</div><div class="v" style="font-size:15px">{{ stageText }}</div></div>
+      <div class="stat"><div class="k">协议耗时</div><div class="v">{{ status.protocol_ms ? (status.protocol_ms/1000).toFixed(1)+'s' : '—' }}</div></div>
+      <div class="stat"><div class="k">交集账户数</div><div class="v" :style="{color: status.stage==='DONE' ? 'var(--green)' : ''}">{{ status.stage==='DONE' ? status.intersection_size.toLocaleString() : '—' }}</div></div>
+    </div>
+  </div>
+
+  <!-- 步骤 3: 结果 -->
+  <div class="card" v-if="status.stage === 'DONE'">
+    <h2><span class="step-num done">3</span> 共同涉诈账户(仅交集可见)</h2>
+    <div class="row">
+      <button class="btn green" @click="exportCsv">⬇ 导出交集 CSV</button>
+      <span class="hint" style="margin:0">双方各自导出的交集内容一致(协议已做计数一致性校验)</span>
+    </div>
+    <table v-if="result.sample && result.sample.length">
+      <thead><tr><th>#</th><th>账号 / 备注</th></tr></thead>
+      <tbody>
+        <tr v-for="(row, i) in result.sample" :key="i"><td>{{ i+1 }}</td><td>{{ row }}</td></tr>
+      </tbody>
+    </table>
+    <div class="hint" v-if="result.count > 50">仅预览前 50 条, 完整 {{ result.count.toLocaleString() }} 条请导出 CSV。</div>
+  </div>
+
+  <!-- 错误 -->
+  <div class="card" v-if="status.stage === 'ERROR'" style="border-color: var(--red)">
+    <h2 style="color: var(--red)">⚠ 出错</h2>
+    <div>{{ status.error }}</div>
+  </div>
+
+  <!-- 日志 -->
+  <div class="card">
+    <h2>协议日志</h2>
+    <div class="log">
+      <div v-for="(line, i) in status.log" :key="i">{{ line }}</div>
+      <div v-if="!status.log || !status.log.length" style="color:var(--dim)">等待操作…</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const { createApp, ref, computed, onMounted, onUnmounted } = Vue;
+
+createApp({
+  setup() {
+    const status = ref({ stage: 'EMPTY', items: 0, log: [], prep_done: 0, prep_total: 0, round_done: 0, round_total: 0 });
+    const result = ref({ count: 0, sample: [] });
+    const uploading = ref(false);
+    // 智能默认对端: 9001 <-> 9002
+    const port = location.port || '9001';
+    const peer = ref(`http://${location.hostname}:${port === '9001' ? '9002' : '9001'}`);
+
+    const stageTextMap = {
+      EMPTY: '未导入名单', PREPARING: '本地预处理中…', READY: '就绪, 可发起求交',
+      RUNNING: '协议运行中…', DONE: '求交完成', ERROR: '出错'
+    };
+    const stageText = computed(() => stageTextMap[status.value.stage] || status.value.stage);
+    const stageBadge = computed(() => {
+      const s = status.value.stage;
+      if (s === 'DONE') return { cls: 'b-done', text: '已完成' };
+      if (s === 'ERROR') return { cls: 'b-err', text: '错误' };
+      if (s === 'RUNNING' || s === 'PREPARING') return { cls: 'b-run', text: '进行中' };
+      if (s === 'READY') return { cls: 'b-done', text: '就绪' };
+      return { cls: 'b-empty', text: '待导入' };
+    });
+
+    const pct = (a, b) => b ? Math.min(100, Math.round(a * 100 / b)) : 0;
+
+    async function poll() {
+      try {
+        const r = await fetch('/api/status');
+        status.value = await r.json();
+        if (status.value.stage === 'DONE' && !result.value.count) {
+          const rr = await fetch('/api/result');
+          result.value = await rr.json();
+        }
+        if (status.value.stage !== 'DONE') result.value = { count: 0, sample: [] };
+      } catch (e) { /* 服务器未启动时静默 */ }
+    }
+    let timer;
+    onMounted(() => { poll(); timer = setInterval(poll, 1000); });
+    onUnmounted(() => clearInterval(timer));
+
+    async function upload(ev) {
+      const file = ev.target.files[0];
+      if (!file) return;
+      uploading.value = true;
+      try {
+        const r = await fetch('/api/list', { method: 'POST', body: file });
+        const j = await r.json();
+        if (!r.ok) alert('导入失败: ' + (j.error || r.status));
+      } finally { uploading.value = false; poll(); }
+    }
+
+    async function start() {
+      const r = await fetch('/api/start', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ peer: peer.value })
+      });
+      const j = await r.json();
+      if (!r.ok) alert('启动失败: ' + (j.error || r.status));
+      poll();
+    }
+
+    async function reset() {
+      await fetch('/api/reset', { method: 'POST' });
+      result.value = { count: 0, sample: [] };
+      poll();
+    }
+
+    function exportCsv() { window.location.href = '/api/export'; }
+
+    return { status, result, peer, uploading, stageText, stageBadge, pct, upload, start, reset, exportCsv };
+  }
+}).mount('#app');
+</script>
+</body>
+</html>

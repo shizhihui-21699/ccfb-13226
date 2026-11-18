@@ -1,0 +1,2 @@
+/usr/bin/ar qc libpsi_core.a CMakeFiles/psi_core.dir/core/psi_core.cpp.o
+/usr/bin/ranlib libpsi_core.a

@@ -1,0 +1,5 @@
+/Users/shizhihui/ccfb/runs/13226/workspace/build/CMakeFiles/psi_core.dir
+/Users/shizhihui/ccfb/runs/13226/workspace/build/CMakeFiles/psi_server.dir
+/Users/shizhihui/ccfb/runs/13226/workspace/build/CMakeFiles/psi_selftest.dir
+/Users/shizhihui/ccfb/runs/13226/workspace/build/CMakeFiles/edit_cache.dir
+/Users/shizhihui/ccfb/runs/13226/workspace/build/CMakeFiles/rebuild_cache.dir
